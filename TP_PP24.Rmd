@@ -12,6 +12,7 @@ et les fonctions disponibles dans *QuadratsFonctions.R*
 library(spatstat)
 library(ggplot2)
 library(tidyverse)
+library(latex2exp)
 source("QuadratsFonctions.R")
 ```
 
@@ -23,11 +24,64 @@ processus réguliers (fonctions *rMaternI*,
 *rMaternII*, *rSSI*). Faire varier les paramètres et commenter.   
 
 ```{r simulation}
+set.seed(1234)
+win = owin(xrange = c(0,1), yrange = c(0,1))
+
+# Poissons
+pp1 <- rpoispp(100, win = win)
+plot(pp1, pch = 19, cex = 0.5, main = TeX("Poisson homogène, $ \\lambda = 100$"))
+ppInohomo = rpoispp(lambda = function(x,y) 100*exp(-3*x), lmax = 100, win = win)
+plot(ppInohomo, pch = 19, cex = 0.5, main = "Poisson inhomogène 100*exp(-3*x + 1)")
+
+# Aggrégé
+nclust <- function(x0, y0, radius, n) {
+    return(runifdisc(n, radius, centre=c(x0, y0)))
+}
+
+nspp <- rNeymanScott(20, 0.2, nclust, radius = 0.05, n = 4)
+plot(nspp, pch = 19, cex = 0.5, main = "Neyman Scott, Poisson + cluster, intensité parents 20, fenetre 0.2, disque rayon 0.05; nb enfant 4")
+
+## Matern clusterisé
+matpp <- rMatClust(20, 0.05, 4)
+plot(matpp, pch = 19, cex = 0.5, main = "Matern clusterisé")
+
+## 
+thomaspp <- rThomas(10, 0.05, 4)
+plot(thomaspp, pch = 19, cex = 0.5, main = "Thomas clusterisé")
+
+# Régulier
+matregIpp <- rMaternI(50, 0.05)
+plot(matregIpp, pch = 19, cex = 0.5, main = "Régulier Matern I")
+
+matregIIpp <- rMaternII(kappa = 20, 0.05)
+plot(matregIpp, pch = 19, cex = 0.5, main = "Régulier Matern II")
+
+## Difficulté d'interaction
+strausspp <- rStrauss(beta = 100, gamma = 0.01, 0.01)
+plot(strausspp, pch = 19, cex = 0.5, main = "Strauss")
 
 ```
 Estimer la densité d'un processus inhomogène avec la fonction *density* en faisant varier la taille de la fenêtre. Commenter.
 ```{r densite}
+y <- seq(0, 1, 0.01)
+x <- y
+grille = expand.grid(x,y)
+z <- outer(x, y, function(x,y) r <- 100*exp(-3*x))
 
+densite = data.frame(x=grille[,1], y = grille[,2], z = c(z))
+
+ggplot(densite, aes(x = x, y = y))+
+    geom_raster(aes(fill = z)) + scale_fill_viridis_c()
+
+sigma= bw.diggle(ppInohomo)
+plot(density(ppInohomo, bw.diggle), main = paste("sigma=", round(sigma,4)))
+points(ppInohomo, pch = 19, cex=0.5)
+
+plot(density(ppInohomo, 0.02), main = paste("sigma=", 0.02))
+points(ppInohomo, pch = 19, cex=0.5)
+
+plot(density(ppInohomo, 0.4), main = paste("sigma=", 0.4))
+points(ppInohomo, pch = 19, cex=0.5)
 ```
 ## Données Paracou 
 Paracou est un lieu avec plusieurs parcelles expérimentales du Cirad, en Guyane. Les arbres y sont observés et étudiés de manière très détaillée et depuis plusieurs dizaines d'années.
@@ -54,70 +108,213 @@ Les coordonnees sont mesurees par rapport au coin inferieur gauche  de la parcel
 
 Les limites de chaque parcelle sont $[0 ; 250] \times [0;250]$.   
 Construire pour chaque espèce l'objet processus ponctuel associé (fonction *ppp*).
+
 ```{r pps.0}
+DonneesParacou <- read.table("DonneesParacou.txt", header = TRUE)
+head(DonneesParacou)
+```
+
+```{r sous-tableau, echo = FALSE}
+Imouamba1 <- DonneesParacou[(DonneesParacou[["N_ESSENCE"]] == 614 & DonneesParacou[["N_PARCELLE"]] == 1),]
+Iwacapou1 <- DonneesParacou[(DonneesParacou[["N_ESSENCE"]] == 116 & DonneesParacou[["N_PARCELLE"]] == 1),]
 
 ```
 
+```{r parcelles, echo = FALSE}
+Dlimx = c(0,250)
+Dlimy = c(0,250)
+
+aireD = diff(Dlimx)*diff(Dlimy)
+
+mouamba1 = ppp(Imouamba1[,2], Imouamba1[,3], Dlimx, Dlimy)
+wacapou1 = ppp(Iwacapou1[,2], Iwacapou1[,3], Dlimx, Dlimy)
+
+
+```
 ### Processus simple
 Visualiser un des processus (*plot*) et déterminer à l'oeil s'il est purement aléatoire ou
 plutot régulier ou agrégé. Estimer son intensité.
 ```{r pps.1}
+plot(mouamba1, pch = 19, cex = 0.5, main = "Mouamba parcelle 1")
+plot(wacapou1, pch = 19, cex = 0.5, main = "Wacapou parcelle 1")
 
+PP <- mouamba1
+sigma = bw.diggle(X = PP)
+plot(density(PP, bw.diggle), main = paste("PP, sigma = ", round(sigma, 4)))
+points(PP,  pch = 19, cex = 0.5)
 ```
+
+
 Utiliser les fonctions  *quadratcount, quadrat.test* de *spatstat* pour tester la répartition aléatoire.
 ```{r pps.2}
+plot(PP, pch = 19, cex = 0.5)
+plot(quadratcount(PP, nx = 5, ny = 5), add = TRUE, col = "red", cex = 1.5, lty = 2)
+```
+
+`quadra.test` réalise le test suivant sur $Y_i$ le nombre de points du quadrat $i$ :
+
+$$H_0 : Y_i \sim \mathcal{P}(\lambda) vs H_1$$
+
+Il s'agit d'un test de $\chi^2$ d'ajustement.
+```{r quadrattest, echo = FALSE}
+quadrat.test(X = PP, nx = 5, ny = 5)
 
 ```
 La fonction *rquadrat* tire aléatoirement  des quadrats de taille donnée dans le domaine $D$. La fonction *plotquadrat* les dessine. La fonction *npquadrat* compte le nombre de points qui tombent dans chaque quadrat. La fonction *npresquadrat* indique la présence de points dans chaque quadrat. Utiliser ces fonctions pour calculer les indices introduits dans le cours, $f$, $D$, $A$, $R$, puis $S^2$, $ID$, $ICF$. Commenter.
-```{r pps.3}
+*npquadrat* : nb points $y_i$ du quadrat i
+*npresquadrat* : $x_i$ = 1 si points dans le quadrat i, 0 sinon.
 
+- $f = \sum x_i / q$
+- $D = \sum y_i / aq$
+- $A = \sum y_i / \sum x_i$
+- $R = A / f$
+
+```{r pps.3}
+set.seed(1234)
+n = 30
+
+qlimx = 30
+qlimy = 30
+
+aireq = qlimx * qlimy
+
+resq <- rquadrat(n, Dlimx = Dlimx, Dlimy = Dlimy,qlimx = qlimx, qlimy = qlimy)
+
+plot(PP, pch = 19, cex = 0.5)
+plotquadrat(resq)
+```
+
+```{r indicateurs-random, echo = FALSE}
+npq = npquadrat(quad = resq, PP$x, PP$y)
+npresq = npresquadrat(quad = resq, PP$x, PP$y)
+
+f = sum(npresq)/n
+D = sum(npq)/(n*aireq)
+A = sum(npq) / sum(npresq)
+R = A/f
+```
+
+```{r indices, echo = FALSE}
+moy = mean(npq)
+S2 = var(npq)
+ID = S2/moy
+pvaleur = 1-pchisq((n-1)*ID,n-1)
+print(paste("S2=", round(S2,2), "ID =", round(ID,2), 'pvaleur =', round(pvaleur, 4)))
 ```
 
 La fonction *testquadrat* teste la répartion aléatoire du processus. Comparer ses résultats avec ceux de *quadrat.test*
 
 ```{r pps.4}
-
+test.q = testquadrat(PP, n, qlimx, qlimy)
+print(test.q)
 ```
 
 Les fonctions *Fest, Gest, Kest, Lest, allstats* estiment les statistiques basées sur les distances. Les calculer et les représenter. Commenter.
 ```{r pps.5}
+Fr = Fest(PP)
+plot(Fr)
 
+Gr = Gest(PP)
+plot(Gr)
+
+Kr = Kest(PP)
+plot(Kr)
+
+Lr = Lest(PP)
+plot(Lr)
+plot(allstats(PP))
 ```
+
+$F(r) = P (d(y,\Phi) \leq r, y \in D)$ donc comme la courbe noire est inférieure
+à la bleue, cela veut dire qu'en prenant un y sur une grille régulière on a 
+moins de chance de trouver des points, donc que ces points sont aggrégés.
+
+$G(r) = P(d(x, \Phi \ {x}) \leq r, x \in \Phi)$ donc en prenant un point du 
+processus on regarde la proba selon la distance de trouver un autre point du 
+processus. Ici G(r) est supérieure à $G_{pois}(r)$, donc le processus est 
+aggrégé.
+
 La fonction *envelope* donne les intervalles d'acceptation des diverses fonctions de distance. Les représenter et conclure.
 ```{r pps.6}
-
+par(mfrow = c(2,2))
+plot(envelope(PP))
+plot(envelope(PP, fun = Gest))
+plot(envelope(PP, fun = Fest))
+plot(envelope(PP, fun = Lest))
+par(mfrow = c(1,1))
 ```
+
+Pour les fonctions K et L, les différences sont très marquées. C'est moins le cas pour G et F.
+
 Calculer et représenter la fonction de corrélation de paires *pcf*, comparer avec les fonctions distances.
 ```{r pps.7}
-
+gr = pcf(PP)
+plot(gr)
 ```
 
 ### Processus bivarié
 Représenter les deux processus d'une même parcelle.
 ```{r ppb.1}
+PP1 <- mouamba1
+PP2 <- wacapou1
 
+plot(PP1, pch = 19, cex = 0.5)
+points(PP2, pch = 19, cex = 0.5, col = "red")
 ```
 
 La fonction *np2quadrat* compte le nombre de points de chacun des processus qui tombent dans chaque quadrat. Faire un test du $\chi^2$ *chisq.test*) pour tester l'indépendance des deux processus. Conclure.
 ```{r ppb.2}
-
+# La table de contingence
+tabcont <- np2quadrat(quad = resq, PP1, PP2)
+chisq.test(tabcont)
 ```
+On réalise ici le test du chi2 sur la table de contingence obtenue à partir des 
+quadrats.
+
+|Sp1\Sp2| pres  | abs | tot |
+|:---:|:---:| :---:|:---:|
+| pres| a | b | m |
+| abs | c | d | n |
+| tot | r | s | N |
+
+
 Calculer l'indice $Q$ du cours et interpréter.
 ```{r ppb.3}
-
+Q = (tabcont[1,1] * tabcont[2,2] - tabcont[1,2] * tabcont[2,1])/(tabcont[1,1] * tabcont[2,2] + tabcont[1,2] * tabcont[2,1])
+print(TeX(paste("$Q =",round(Q,4),"$")))
 ```
 
 Construire un objet processus ponctuel bivarié à l'aide de la fonction *superimpose*.
 ```{r ppb.4}
-
+PPm = superimpose("1" = PP1, "2" = PP2)
+plot(PPm, cex = 0.5)
 ```
 Calculer l'indice de Piélou avec la fonction *Pielou*.
 ```{r ppb.5}
-
+indPielou = Pielou(PPm)
+print(indPielou$test)
 ```
+
+
+
 Les fonctions *Gcross, Kcross, alltypes* estiment les fonctions des distances croisées.
 Les calculer, les représenter et interpréter les résultats.
 ```{r ppb.6}
+par(mfrow = c(2,2))
+plot(Gcross(PPm, "1", "2"), legend = TRUE)
+plot(Gcross(PPm, "2", "1"), legend = TRUE)
 
+plot(Kcross(PPm, "1", "2"), legend = TRUE)
+plot(Kcross(PPm, "2", "1"), legend = TRUE)
+par(mfrow = c(1,1))
 ```
 
+```{r ppb.7, echo = FALSE}
+par(mfrow = c(2,2))
+plot(envelope(Gcross(PPm, "1", "2")), legend = TRUE)
+plot(Gcross(PPm, "2", "1"), legend = TRUE)
+
+plot(Kcross(PPm, "1", "2"), legend = TRUE)
+plot(Kcross(PPm, "2", "1"), legend = TRUE)
+par(mfrow = c(1,1))
+```
