@@ -1,0 +1,123 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# TP Processus Ponctuels
+
+### Chargement des packages
+On utilisera le package  *spatstat*,
+et les fonctions disponibles dans *QuadratsFonctions.R*
+
+```{r charger les packages,message=FALSE,warning=FALSE}
+library(spatstat)
+library(ggplot2)
+library(tidyverse)
+source("QuadratsFonctions.R")
+```
+
+## Simulation
+Simuler différents processus ponctuels :  Poisson homogène, inhomogène (fonction
+*rpoispp*),  processus agrégés (fonctions
+*rNeymanScott*, *rMatClust*, *rThomas*) et
+processus réguliers (fonctions *rMaternI*,
+*rMaternII*, *rSSI*). Faire varier les paramètres et commenter.   
+
+```{r simulation}
+
+```
+Estimer la densité d'un processus inhomogène avec la fonction *density* en faisant varier la taille de la fenêtre. Commenter.
+```{r densite}
+
+```
+## Données Paracou 
+Paracou est un lieu avec plusieurs parcelles expérimentales du Cirad, en Guyane. Les arbres y sont observés et étudiés de manière très détaillée et depuis plusieurs dizaines d'années.
+
+### Lecture des données
+Le fichier *DonneesParacou.txt* contient les données de trois
+espèces d'arbres dans  deux parcelles de Paracou (Guyane).   
+Les espèces sont :
+
+- le mouamba sur la parcelle 1 (86 enregistrements)   
+- le wacapou sur la parcelle 1 (83 enregistrements)   
+- le wapa sur la parcelle 4 (252 enregistrements)   
+- le mouamba sur la parcelle 4 (141 enregistrements)   
+
+Une ligne correspond à un arbre, décrit par les variables :
+
+"I_ARBRE": N° identifiant de l'arbre   
+"X": abscisse de l'arbre   
+"Y": ordonnee de l'arbre   
+Les coordonnees sont mesurees par rapport au coin inferieur gauche  de la parcelle à laquelle appartient l'arbre.   
+"N_ESSENCE" : N° de l'essence   
+"NOM" : Nom de l'essence   
+"N_PARCELLE": N° de la parcelle   
+
+Les limites de chaque parcelle sont $[0 ; 250] \times [0;250]$.   
+Construire pour chaque espèce l'objet processus ponctuel associé (fonction *ppp*).
+```{r pps.0}
+
+```
+
+### Processus simple
+Visualiser un des processus (*plot*) et déterminer à l'oeil s'il est purement aléatoire ou
+plutot régulier ou agrégé. Estimer son intensité.
+```{r pps.1}
+
+```
+Utiliser les fonctions  *quadratcount, quadrat.test* de *spatstat* pour tester la répartition aléatoire.
+```{r pps.2}
+
+```
+La fonction *rquadrat* tire aléatoirement  des quadrats de taille donnée dans le domaine $D$. La fonction *plotquadrat* les dessine. La fonction *npquadrat* compte le nombre de points qui tombent dans chaque quadrat. La fonction *npresquadrat* indique la présence de points dans chaque quadrat. Utiliser ces fonctions pour calculer les indices introduits dans le cours, $f$, $D$, $A$, $R$, puis $S^2$, $ID$, $ICF$. Commenter.
+```{r pps.3}
+
+```
+
+La fonction *testquadrat* teste la répartion aléatoire du processus. Comparer ses résultats avec ceux de *quadrat.test*
+
+```{r pps.4}
+
+```
+
+Les fonctions *Fest, Gest, Kest, Lest, allstats* estiment les statistiques basées sur les distances. Les calculer et les représenter. Commenter.
+```{r pps.5}
+
+```
+La fonction *envelope* donne les intervalles d'acceptation des diverses fonctions de distance. Les représenter et conclure.
+```{r pps.6}
+
+```
+Calculer et représenter la fonction de corrélation de paires *pcf*, comparer avec les fonctions distances.
+```{r pps.7}
+
+```
+
+### Processus bivarié
+Représenter les deux processus d'une même parcelle.
+```{r ppb.1}
+
+```
+
+La fonction *np2quadrat* compte le nombre de points de chacun des processus qui tombent dans chaque quadrat. Faire un test du $\chi^2$ *chisq.test*) pour tester l'indépendance des deux processus. Conclure.
+```{r ppb.2}
+
+```
+Calculer l'indice $Q$ du cours et interpréter.
+```{r ppb.3}
+
+```
+
+Construire un objet processus ponctuel bivarié à l'aide de la fonction *superimpose*.
+```{r ppb.4}
+
+```
+Calculer l'indice de Piélou avec la fonction *Pielou*.
+```{r ppb.5}
+
+```
+Les fonctions *Gcross, Kcross, alltypes* estiment les fonctions des distances croisées.
+Les calculer, les représenter et interpréter les résultats.
+```{r ppb.6}
+
+```
+
